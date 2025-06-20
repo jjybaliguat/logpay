@@ -66,6 +66,8 @@ export async function GET(req: Request) {
         // };
         // });
 
+        console.log(attendanceRecords)
+
         return NextResponse.json(attendanceRecords, { status: 200 });
     }else{
         return NextResponse.json({message: "Employee Code Not Found"}, {status: 400})

@@ -113,6 +113,10 @@ model Employee {
   isActive      Boolean  @default(true)
   fingerprintId Int?      // Numeric fingerprint ID for sensor
   fingerEnrolled  Boolean? @default(false)
+  shiftType ShiftType @default(NORMAL)
+  customStartTime String?
+  customEndTime String?
+
 
   payrolls          Payroll[]
   // deductions        EmployeeDeduction[]
@@ -128,6 +132,12 @@ model Employee {
   updatedAt     DateTime @updatedAt
 
   fingerPrints FingerPrintID[]
+}
+
+enum ShiftType {
+  NORMAL   // 8am - 5pm
+  EVENING  // 5pm - 1am
+  NIGHT    // 1am - 9am
 }
 
 model FingerPrintID {
