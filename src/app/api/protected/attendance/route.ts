@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   const deviceToken = searchParams.get("deviceToken") as string
   const { fingerId, timeIn } = await req.json()
 
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
+  const now = new Date()
   if (!deviceToken || !fingerId) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
   }
@@ -166,11 +166,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `No valid device/user found.` }, { status: 404 })
     }
 
-        // Step 1: Get "now" in Asia/Manila
-        const nowManila = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-
         // Step 3: Construct shiftStart and graceCutoff in Manila time
-        const shiftStart = new Date(nowManila);
+        const shiftStart = new Date(now);
         shiftStart.setHours(shiftStartHour, 0, 0, 0); // Set to shift start in Manila
         
         const graceCutoff = new Date(shiftStart);
@@ -179,18 +176,16 @@ export async function POST(req: Request) {
 
         // Step 4: Determine the actual time-in in Manila time
         const timeInUTC = timeIn ? new Date(timeIn) : new Date(); // Time provided or now (UTC)
-        const timeInManila = new Date(timeInUTC.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-        console.log(timeInManila)
 
         // Step 5: Determine attendance status
         const status: AttendanceStatus =
-        timeInManila > graceCutoff ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
+        timeInUTC > graceCutoff ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
 
     const attendance = await prisma.attendance.create({
       data: {
         fingerprintId: Number(fingerId),
         employeeId: employee.id,
-        timeIn: timeInManila,
+        timeIn: timeInUTC,
         status,
         deviceId: deviceToken,
       },
