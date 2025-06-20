@@ -169,17 +169,23 @@ export async function POST(req: Request) {
         // Step 3: Construct shiftStart and graceCutoff in Manila time
         const shiftStart = new Date(now);
         shiftStart.setHours(shiftStartHour, 0, 0, 0); // Set to shift start in Manila
+        shiftStart.setSeconds(0);
+        shiftStart.setMilliseconds(0);
         
         const graceCutoff = new Date(shiftStart);
         graceCutoff.setHours(shiftStartHour, 0, 0, 0); // Set to shift start in Manila
         graceCutoff.setMinutes(graceCutoff.getMinutes() + (device.user.gracePeriodInMinutes ?? graceMinutes));
+        graceCutoff.setSeconds(0);
+        graceCutoff.setMilliseconds(0);
 
         // Step 4: Determine the actual time-in in Manila time
         const timeInUTC = timeIn ? new Date(timeIn) : new Date(); // Time provided or now (UTC)
-
+        const timeInTemp = new Date(timeInUTC)
+        timeInTemp.setSeconds(0);
+        timeInTemp.setMilliseconds(0);
         // Step 5: Determine attendance status
         const status: AttendanceStatus =
-        timeInUTC > graceCutoff ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
+        timeInTemp > graceCutoff ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
 
     const attendance = await prisma.attendance.create({
       data: {
