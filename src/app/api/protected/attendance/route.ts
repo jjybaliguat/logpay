@@ -4,30 +4,6 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient()
 
-function getShiftStartHour(shiftType: string) {
-  switch (shiftType) {
-    case "EVENING":
-      return 17
-    case "NIGHT":
-      return 1
-    case "NORMAL":
-    default:
-      return 8
-  }
-}
-
-function getShiftEndHour(shiftType: string) {
-  switch (shiftType) {
-    case "EVENING":
-      return 1
-    case "NIGHT":
-      return 9
-    case "NORMAL":
-    default:
-      return 17
-  }
-}
-
 export async function GET(req: Request){
     const url = new URL(req.url)
     const searchParams = new URLSearchParams(url.search) 
@@ -72,145 +48,139 @@ export async function GET(req: Request){
     }
 }
 
-export async function POST(req: Request) {
-  const url = new URL(req.url)
-  const searchParams = new URLSearchParams(url.search)
-  const deviceToken = searchParams.get("deviceToken") as string
-  const { fingerId, timeIn } = await req.json()
-
-  const now = new Date()
-  if (!deviceToken || !fingerId) {
-    return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
-  }
-
-  try {
-    const employee = await prisma.employee.findFirst({
-      where: {
-        fingerPrints: {
-          some: { fingerId: Number(fingerId) },
-        },
-        fingerEnrolled: true,
-        isActive: true,
-        deviceId: deviceToken,
-      },
-      select: {
-        id: true,
-        fullName: true,
-        shiftType: true,
-        fingerPrints: { select: { fingerId: true } },
-      },
-    })
-
-    if (!employee) {
-      return NextResponse.json({ error: `Employee with fingerId ${fingerId} not found.` }, { status: 404 })
-    }
-
-    const shiftStartHour = getShiftStartHour(employee.shiftType)
-    console.log(shiftStartHour)
-    const shiftEndHour = getShiftEndHour(employee.shiftType)
-    const graceMinutes = 15
-
-    // Attendance date range handling (especially for night shifts)
-    const startOfAttendanceDay = new Date(now)
-    const endOfAttendanceDay = new Date(now)
-
-    if (shiftEndHour < shiftStartHour) {
-      // Overnight shift, start day at 12pm previous day
-      startOfAttendanceDay.setHours(12, 0, 0, 0)
-      startOfAttendanceDay.setDate(startOfAttendanceDay.getDate() - 1)
-      endOfAttendanceDay.setHours(11, 59, 59, 999)
-    } else {
-      // Regular shift
-      startOfAttendanceDay.setHours(0, 0, 0, 0)
-      endOfAttendanceDay.setHours(23, 59, 59, 999)
-    }
-
-    // Check if already logged in today
-    const existingRecord = await prisma.attendance.findFirst({
-      where: {
-        deviceId: deviceToken,
-        fingerprintId: { in: employee.fingerPrints.map(fp => fp.fingerId) },
-        timeIn: { gte: startOfAttendanceDay, lte: endOfAttendanceDay },
-      },
-    })
-
-    if (existingRecord) {
-      if (existingRecord.timeOut) {
-        return NextResponse.json({ error: AttendanceError.SIGNED_OUT_ALREADY }, { status: 400 })
-      }
-
-      const lastLoginTime = new Date(existingRecord.timeIn)
-      const diffInMinutes = (now.getTime() - lastLoginTime.getTime()) / (1000 * 60)
-      if (diffInMinutes < 30) {
-        return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 })
-      }
-
-      const updatedAttendance = await prisma.attendance.update({
-        where: { id: existingRecord.id },
-        data: { timeOut: now },
-      })
-
-      return NextResponse.json({
-        name: employee.fullName?.split(" ")[0],
-        timeOut: updatedAttendance.timeOut,
-      })
-    }
-
-    // Fetch device & user config
-    const device = await prisma.device.findUnique({
-      where: { deviceId: deviceToken },
-      include: { user: true },
-    })
-
-    if (!device || !device.user) {
-      return NextResponse.json({ error: `No valid device/user found.` }, { status: 404 })
-    }
-
-        // Step 3: Construct shiftStart and graceCutoff in Manila time
-        const shiftStart = new Date(now);
-        shiftStart.setHours(shiftStartHour, 0, 0, 0); // Set to shift start in Manila
-        shiftStart.setSeconds(0);
-        shiftStart.setMilliseconds(0);
+export async function POST(req: Request){
+    const url = new URL(req.url)
+    const searchParams = new URLSearchParams(url.search) 
+    const deviceToken = searchParams.get('deviceToken') as string
+    const {fingerId, timeIn} = await req.json()
+    // const filters: any = {};
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            // Get start and end of today
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
         
-        const graceCutoff = new Date(shiftStart);
-        graceCutoff.setHours(shiftStartHour, 0, 0, 0); // Set to shift start in Manila
-        graceCutoff.setMinutes(graceCutoff.getMinutes() + (device.user.gracePeriodInMinutes ?? graceMinutes));
-        graceCutoff.setSeconds(0);
-        graceCutoff.setMilliseconds(0);
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+        // Get 12:00 PM timestamp for today
+        // const thresholdLogin = new Date(now);
+        // thresholdLogin.setHours(8, , 0, 0);
 
-        // Step 4: Determine the actual time-in in Manila time
-        const timeInUTC = timeIn ? new Date(timeIn) : new Date(); // Time provided or now (UTC)
-        const timeInTemp = new Date(timeInUTC)
-        timeInTemp.setSeconds(0);
-        timeInTemp.setMilliseconds(0);
-        // Step 5: Determine attendance status
-        const status: AttendanceStatus =
-        timeInTemp > graceCutoff ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
+    if(!deviceToken){
+        return NextResponse.json({error: "Unauthorized"}, {status: 401})
+    }
 
-    const attendance = await prisma.attendance.create({
-      data: {
-        fingerprintId: Number(fingerId),
-        employeeId: employee.id,
-        timeIn: timeInUTC,
-        status,
-        deviceId: deviceToken,
-      },
-      include: {
-        employee: true,
-      },
-    })
+    if(!fingerId){
+        return NextResponse.json({error: "Missing required field."}, {status: 400})
+    }
 
-    return NextResponse.json(
-      {
-        name: attendance.employee.fullName?.split(" ")[0],
-        timeIn: attendance.timeIn,
-      },
-      { status: 201 }
-    )
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
-  }
+    try {
+        // const employee = await prisma.employee.findFirst({
+        //     where: {
+        //         deviceId: deviceToken,
+        //         fingerprintId: fingerId,
+        //         fingerEnrolled: true
+        //     }
+        // })
+        const employee = await prisma.employee.findFirst({
+            where: {
+                fingerPrints: {
+                    some: {
+                        fingerId: Number(fingerId),
+                    }
+                },
+                fingerEnrolled: true,
+                isActive: true,
+                deviceId: deviceToken
+            },
+            select: {
+                id: true, // Get employee ID
+                fingerPrints: { select: { fingerId: true } }, // Get all their fingerIds,
+                fullName: true
+            }
+        })
+
+        if(!employee){
+            return NextResponse.json({error: `Employee with fingerId ${fingerId} not found.`}, {status: 404})
+        }
+        // Check if there's already a time-in record for today
+        const existingRecord = await prisma.attendance.findFirst({
+            where: {
+            deviceId: deviceToken,
+            fingerprintId: { in: employee.fingerPrints.map(fp => fp.fingerId) }, // Check all fingerIds
+            timeIn: { gte: startOfDay, lte: endOfDay }, // Check today's records
+            },
+        });
+
+        if (existingRecord) {
+            // If timeOut is already recorded, prevent duplicate updates
+            if (existingRecord.timeOut) {
+              return NextResponse.json({error: AttendanceError.SIGNED_OUT_ALREADY}, {status: 400})
+            }
+
+            const lastLoginTime = new Date(existingRecord.timeIn);
+            const diffInMinutes = (now.getTime() - lastLoginTime.getTime()) / (1000 * 60);
+
+                    // Prevent duplicate login if already signed in before 12:00 PM
+            if (diffInMinutes < 30) {
+                return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 });
+            }
+        
+            // Update timeOut with the exact time of API call
+            const updatedAttendance = await prisma.attendance.update({
+              where: { id: existingRecord.id },
+              data: { timeOut: now }, // Exact time when API is called
+            });
+        
+            return NextResponse.json({name: employee?.fullName?.split(" ")[0], timeOut: updatedAttendance.timeOut});
+          }
+
+        const device = await prisma.device.findUnique({
+            where: {
+                deviceId: deviceToken
+            },
+            include: {
+                user: true
+            }
+        })
+
+        if(!device){
+            return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
+        }
+
+        const cutoffTime = new Date(now);
+        cutoffTime.setHours(8, Number(device.user?.gracePeriodInMinutes), 0, 0); // set time-in grace period time
+
+        // Determine status
+        const timeNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
+        timeNow.setUTCSeconds(0);
+        let status
+        if(!timeIn){
+            status = timeNow > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME
+        }else{
+            const timeInTime = new Date(timeIn)
+            timeInTime.setUTCSeconds(0)
+            status = timeInTime > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME
+        }
+        // const status = timeIn > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
+
+        const attendance = await prisma.attendance.create({
+            data: {
+                fingerprintId: Number(fingerId),
+                employeeId: employee?.id as string,
+                timeIn: timeIn? timeIn : now,
+                status,
+                deviceId: deviceToken,
+            },
+            include: {
+                employee: true
+            }
+        })
+        prisma.$disconnect()
+        return NextResponse.json({name: attendance.employee.fullName?.split(" ")[0], timeIn: attendance.timeIn}, {status: 201})
+    } catch (error) {
+        console.log(error)
+        return NextResponse.json({error: "Internal Server Error."})
+    }
 }
 
 export async function PATCH(req: Request) {
