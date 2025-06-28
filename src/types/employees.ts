@@ -1,3 +1,4 @@
+import { ShiftType } from "@prisma/client"
 import { Device } from "./device"
 
 export interface Employees{
@@ -20,6 +21,7 @@ export interface Employees{
     fingerEnrolled: boolean,
     deviceId: string,
     device: Device,
+    shiftType: ShiftType,
     cashAdvance: {
         id: string,
         amount: number

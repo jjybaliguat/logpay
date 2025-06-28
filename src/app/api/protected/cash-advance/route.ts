@@ -27,16 +27,35 @@ export async function DELETE(req: Request){
             }
         })
 
-        await prisma.cashAdvance.update({
-            where: {
-                id: cashAdvanceLogs?.cashAdvanceId
-            },
-            data: {
-                amount: {
-                    decrement: cashAdvanceLogs?.amount
-                }
-            },
-        })
+        const cashAdvance = await prisma.cashAdvance.findUnique({
+            where: { id: cashAdvanceLogs?.cashAdvanceId! },
+            select: { amount: true }
+            });
+
+        
+        if(cashAdvanceLogs && cashAdvance){
+            if(cashAdvance.amount >= cashAdvanceLogs?.amount){
+                await prisma.cashAdvance.updateMany({
+                    where: {
+                        id: cashAdvanceLogs?.cashAdvanceId!
+                    },
+                    data: {
+                        amount: {
+                            decrement: cashAdvanceLogs?.amount
+                        }
+                    },
+                })
+            }else if(cashAdvance?.amount < cashAdvanceLogs?.amount){
+                await prisma.cashAdvance.updateMany({
+                    where: {
+                        id: cashAdvanceLogs?.cashAdvanceId!
+                    },
+                    data: {
+                        amount: 0
+                    }
+                })
+            }
+        }
 
         return NextResponse.json({message: "Cash Advance record deleted"}, {status: 200})
     } catch (error) {

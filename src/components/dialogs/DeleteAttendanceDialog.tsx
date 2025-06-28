@@ -14,7 +14,7 @@ import {
 import { useRef, useState } from "react"
 import { mutate } from "swr"
 
-export function DeleteCashAdvanceConfirmationDialog({
+export function DeleteAttendanceDialog({
     id
 } : {
     id: string,
@@ -32,13 +32,12 @@ export function DeleteCashAdvanceConfirmationDialog({
             async function onDelete(){
               setDeleting(true)
               try {
-                await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/cash-advance?id=${id}`, {
+                await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/attendance?id=${id}`, {
                   method: "DELETE"
                 })
                 setDeleting(false)
                 onClose()
-                mutate("getCashAdvance")
-                mutate("getCashAdvanceBalance")
+                mutate("getAttendance")
               } catch (error) {
                 console.log(error)
                 setDeleting(false)
@@ -57,7 +56,7 @@ export function DeleteCashAdvanceConfirmationDialog({
           </DialogDescription>
         </DialogHeader>
         <div>
-            <p className="text-[14px]">Are you sure you want to delete this Cash Advance Record?</p>    
+            <p className="text-[14px]">Are you sure you want to delete this Attendance Record?</p>    
             <p className="text-[14px]">This can&apos;t be undone.</p>
         </div>
         <DialogFooter className="flex gap-4 mt-4">

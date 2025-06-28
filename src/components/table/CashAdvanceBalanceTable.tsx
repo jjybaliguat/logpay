@@ -42,6 +42,7 @@ import { CashAdvance } from "@/types/cash-advance"
 import { getCashAdvance, getCashAdvancebalance } from "@/app/actions"
 import { formatDate } from "@/utils/formatDate"
 import { DeleteCashAdvanceConfirmationDialog } from "../dialogs/DeleteCashAdvanceConfirmationDialog"
+import { DeleteCashAdvanceBalanceConfirmationDialog } from "../dialogs/DeleteCashAdvanceBalanceConfirmationDialog"
 
 export const columns: ColumnDef<any>[] = [
   {
@@ -105,7 +106,7 @@ export const columns: ColumnDef<any>[] = [
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {/* <DropdownMenuItem><Link href={`/dashboard/employees/bio-enroll/${employee.id}/${employee.fingerprintId && employee.fingerprintId}`}>{!employee.fingerEnrolled? "Enroll" : "Re-Enroll"} Biometric</Link></DropdownMenuItem> */}
-            <DeleteCashAdvanceConfirmationDialog id={cashAdvance.id}/>
+            <DeleteCashAdvanceBalanceConfirmationDialog id={cashAdvance.id}/>
           </DropdownMenuContent>
         </DropdownMenu>
       )

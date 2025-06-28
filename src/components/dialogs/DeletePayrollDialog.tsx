@@ -56,7 +56,7 @@ export function DeletePayrollDialog({
           </DialogDescription>
         </DialogHeader>
         <div>
-            <p className="text-[14px]">Are you sure you cant to delete this Payroll Record?</p>    
+            <p className="text-[14px]">Are you sure you want to delete this Payroll Record?</p>    
             <p className="text-[14px]">This can&apos;t be undone.</p>
         </div>
         <DialogFooter className="flex gap-4 mt-4">

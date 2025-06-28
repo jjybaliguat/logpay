@@ -51,10 +51,10 @@ export function CreateCashAdvanceDialog() {
 
     async function getEmployees(){
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee?id=${session?.data?.user.id? session.data.user.id : ""}`)
+          const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee?id=${session?.data?.user.parentId? session.data.user.parentId : session?.data?.user.id}`)
           
           const data = await response.json()
-          // console.log(data)
+          console.log(data)
           return data
         } catch (error) {
           console.log(error)
@@ -80,6 +80,7 @@ export function CreateCashAdvanceDialog() {
                     duration: 3000,
                   })
                   mutate("getCashAdvance")
+                  mutate("getCashAdvanceBalance")
                 }else if(response.count >= 1){
                     setCreating(false)
                     if(buttonRef.current){

@@ -45,7 +45,8 @@ export async function getSingleEmployee(id: string){
                 attendance: {
                     orderBy: {
                         timeIn: "desc"
-                    }
+                    },
+                    take: 14
                 }
             }
         })

@@ -149,7 +149,7 @@ model FingerPrintID {
 
 model CashAdvance {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  employeeId      String @db.ObjectId
+  employeeId      String @db.ObjectId @unique
   employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   amount          Float    // Total cash advance amount owed
   logs            CashAdvanceLogs[]

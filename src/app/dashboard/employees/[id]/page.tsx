@@ -13,6 +13,7 @@ const EmployeeDetail = async({
 }) => {
     const id = (await params).id
     const employee: any = await getSingleEmployee(id)
+    console.log(employee)
   return (
     <div className='flex flex-col gap-4'>
       <UpdateEmployeeForm employee={employee} />

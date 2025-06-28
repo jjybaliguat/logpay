@@ -113,3 +113,29 @@ export async function PATCH(req: Request){
         return NextResponse.json({error: "Internal Server Error"}, {status: 500})
     }
 }
+
+export async function DELETE(req: Request) {
+    const url = new URL(req.url)
+    const searchParams = new URLSearchParams(url.search)
+    const id = searchParams.get("id")
+
+    if(!id) return NextResponse.json({message: "Missing required params"}, {status: 400})
+    try {
+        const employee = await prisma.employee.findUnique({
+            where: {
+                id
+            }
+        })
+        if(!employee) return NextResponse.json({message: `Employee with id ${id} not found.`}, {status: 404})
+        
+        await prisma.employee.delete({
+            where: {
+                id
+            }
+        })
+        return NextResponse.json({message: "Employee deleted successfully."}, {status: 200})
+    } catch (error) {
+        console.log(error)
+        return NextResponse.json({message: "Internal Server Error."}, {status: 500})
+    }
+}

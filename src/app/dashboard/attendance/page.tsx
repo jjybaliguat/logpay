@@ -1,3 +1,4 @@
+import { CreateAttendanceDialog } from '@/components/dialogs/CreateAttendanceDialog'
 import HeaderBreadCrumb from '@/components/layout/HeaderBreadCrumb'
 import { AttendanceTable } from '@/components/table/AttendanceTable'
 import { Button } from '@/components/ui/button'
@@ -12,9 +13,7 @@ const AttendancePage = () => {
         <Card>
             <CardHeader className='flex flex-row justify-between items-center'>
                 <CardTitle>Attendance</CardTitle>
-                <Button disabled={true}>
-                <Link href="/dashboard/attendance/create">Create</Link>
-                </Button>
+                <CreateAttendanceDialog />
             </CardHeader>
             <CardContent>
                 <AttendanceTable />

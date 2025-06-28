@@ -54,7 +54,7 @@ export function EditAttendanceDialog({
   };
 
     const [dateIn, setDateIn] = useState(parseDate(attendance.timeIn))
-    const [dateOut, setDateOut] = useState(parseDate(attendance.timeOut))
+    const [dateOut, setDateOut] = useState(parseDate(attendance.timeOut? attendance.timeOut : null))
     const [timeIn, setTimeIn] = useState(parseTime(attendance.timeIn))
     const [timeOut, setTimeOut] = useState(parseTime(attendance.timeOut))
     const [submitting, setSubmitting] = useState(false)
@@ -62,9 +62,13 @@ export function EditAttendanceDialog({
     
     async function onSubmit(e: React.FormEvent) {
       e.preventDefault()
-      setSubmitting(true)
+      // setSubmitting(true)
       const newTimeInUTC = formatToUTC(dateIn, timeIn);
-      const newTimeOutUTC = formatToUTC(dateOut, timeOut);
+      let newTimeOutUTC = null;
+
+      if (dateOut && timeOut) {
+        newTimeOutUTC = formatToUTC(dateOut, timeOut);
+      }
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
     try {

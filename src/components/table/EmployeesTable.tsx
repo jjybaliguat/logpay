@@ -40,6 +40,7 @@ import useSWR, { mutate } from "swr"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { DeleteEmployeeDialogConfirmation } from "../dialogs/DeleteEmployeeDialogConfirmation"
 
 export const columns: ColumnDef<Employees>[] = [
   {
@@ -149,6 +150,7 @@ export const columns: ColumnDef<Employees>[] = [
               <DropdownMenuItem key={finger.id}><Link href={`/dashboard/employees/bio-enroll/${employee.id}/${finger.fingerId}`}>Re-enroll finger {finger.fingerId}</Link></DropdownMenuItem>
             ))} */}
             <DropdownMenuItem><Link href={`/dashboard/employees/${employee.id}`}>View Details</Link></DropdownMenuItem>
+            <DeleteEmployeeDialogConfirmation id={employee.id} />
           </DropdownMenuContent>
         </DropdownMenu>
       )

@@ -48,6 +48,7 @@ import { DeletePayrollDialog } from "../dialogs/DeletePayrollDialog"
 import { Attendance, AttendanceStatus } from "@/types/attendance"
 import { formatDateTime } from "@/utils/formatDateTime"
 import { EditAttendanceDialog } from "../dialogs/EditAttendanceDialog"
+import { DeleteAttendanceDialog } from "../dialogs/DeleteAttendanceDialog"
 
 export const columns: ColumnDef<Attendance>[] = [
   {
@@ -134,7 +135,7 @@ export const columns: ColumnDef<Attendance>[] = [
             {/* <DropdownMenuItem><Link href={`/dashboard/employees/bio-enroll/${employee.id}/${employee.fingerprintId && employee.fingerprintId}`}>{!employee.fingerEnrolled? "Enroll" : "Re-Enroll"} Biometric</Link></DropdownMenuItem> */}
             <EditAttendanceDialog attendance={attendance} />
             <DropdownMenuSeparator />
-            {/* <DeletePayrollDialog id={payroll.id}/> */}
+            <DeleteAttendanceDialog id={attendance.id}/>
           </DropdownMenuContent>
         </DropdownMenu>
       )

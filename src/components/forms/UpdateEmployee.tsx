@@ -28,6 +28,8 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Employees } from '@/types/employees'
 import { EmployeeStatus, SelectEmployeeStatus } from '../select/SelectEmployeeStatus'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select'
+import { ShiftType } from '@prisma/client'
 // import { DeductionStatus, DeductionType } from '@prisma/client'
 // import { SelectDeductionType } from '@/components/select/SelectDeductionType'
 // import { SelectDeductionStatus } from '@/components/select/SelectDeductionStatus'
@@ -48,7 +50,8 @@ const formSchema = z.object({
   sssNumber: z.string().optional(),
   pagIbigNumber: z.string().optional(),
   philHealthNumber: z.string().optional(),
-  isActive: z.boolean()
+  isActive: z.boolean(),
+  shiftType: z.string(),
 })
 
 // interface Deductions {
@@ -84,7 +87,8 @@ const UpdateEmployeeForm = ({
           sssNumber: employee.sssNumber? employee.sssNumber : "",
           pagIbigNumber: employee.pagIbigNumber? employee.pagIbigNumber : "",
           philHealthNumber: employee.philHealthNumber? employee.philHealthNumber : "",
-          isActive: employee.isActive? true : false
+          isActive: employee.isActive? true : false,
+          shiftType: employee.shiftType
         },
       })
      
@@ -370,6 +374,34 @@ const UpdateEmployeeForm = ({
                             <FormLabel>Status</FormLabel><br />
                             <FormControl>
                                 <SelectEmployeeStatus selected={field.value? EmployeeStatus.ACTIVE : EmployeeStatus.INACTIVE} onSelectChange={field.onChange} />
+                            </FormControl>
+                            <FormDescription>
+                                
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="shiftType"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Shift Type</FormLabel><br />
+                            <FormControl>
+                                <Select value={field.value} onValueChange={field.onChange}>
+                                    <SelectTrigger className="w-[100px]">
+                                        <SelectValue placeholder="Shift Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                        <SelectLabel>Shift Type</SelectLabel>
+                                        {Object.values(ShiftType).map((type)=>(
+                                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                                        ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
                             </FormControl>
                             <FormDescription>
                                 

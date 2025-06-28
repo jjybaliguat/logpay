@@ -45,18 +45,34 @@ export async function POST(req: Request){
             }
         })
 
-        await prisma.cashAdvance.updateMany({
+        const cashAdvance = await prisma.cashAdvance.findUnique({
             where: {
                 employeeId: employeeId
-            },
-            data: {
-                amount: {
-                    decrement: caDeduction
-                }
             }
         })
-
-        console.log(payroll)
+        if(cashAdvance){
+            if(cashAdvance.amount >= caDeduction){
+                await prisma.cashAdvance.updateMany({
+                    where: {
+                        employeeId: employeeId
+                    },
+                    data: {
+                        amount: {
+                            decrement: caDeduction
+                        }
+                    }
+                })
+            }else if(cashAdvance?.amount < caDeduction){
+                await prisma.cashAdvance.updateMany({
+                    where: {
+                        employeeId: employeeId
+                    },
+                    data: {
+                        amount: 0
+                    }
+                })
+            }
+        }
 
         return NextResponse.json(payroll, {status: 201})
     } catch (error) {
