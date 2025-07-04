@@ -2,11 +2,12 @@
 
 import { PayslipStatus } from "@/components/select/SelectPayslipStatus";
 import { Employees } from "@/types/employees";
+import { getUTCDateWithTime } from "@/utils/getUTCDateWithTime";
 import { hashPassword } from "@/utils/hashPassword";
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, ShiftType, User } from "@prisma/client";
 
 import bcrypt from 'bcryptjs'
-import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { startOfWeek, endOfWeek, subWeeks, addDays } from "date-fns";
 import { NextResponse } from "next/server";
 
 
@@ -339,10 +340,6 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
     const today = new Date()
 
     try {
-        const startofDayUTC = new Date(startDate)
-        startofDayUTC.setUTCHours(0,0,0,0)
-        const endOfDayUTC = new Date(endDate);
-        endOfDayUTC.setUTCHours(23, 59, 59, 999);
 
         const employer = await prisma.user.findUnique({
             where: {
@@ -357,10 +354,19 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                 overtimeThresholdInMinutes: true
             }
         })
+
+        const employee = await prisma.employee.findUnique({
+            where: {
+                id: employeeId
+            }
+        })
+
         // console.log(employer)
         if(!employer) return null
-        const timeParts: number[] | undefined = employer?.workStartTime?.split(":").map(Number);
-        const timeEndParts: number[] | undefined = employer?.workEndTime?.split(":").map(Number);
+        const timeParts: number[] | undefined = employee?.shiftType == ShiftType.NORMAL? employee.customStartTime? employee.customStartTime.split(":").map(Number) : employer?.workStartTime?.split(":").map(Number) : employee?.customStartTime?.split(":").map(Number);
+        const timeEndParts: number[] | undefined = employee?.shiftType == ShiftType.NORMAL? employee.customStartTime? employee.customEndTime?.split(":").map(Number) : employer?.workEndTime?.split(":").map(Number) : employee?.customEndTime?.split(":").map(Number);
+        console.log(timeParts)
+        console.log(timeEndParts)
         if(!timeParts) return null
         if(!timeEndParts) return null
         // Create a new Date object with the correct time, forcing UTC
@@ -381,6 +387,24 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
         overTimeThresholdTime.setUTCMinutes(overTimeThresholdTime.getMinutes() + employer?.overtimeThresholdInMinutes!)
         overTimeThresholdTime.setUTCSeconds(0)
 
+        const startofDayUTC = new Date(startDate)
+        let startHours = 0, startMinutes = 0;
+        let endHours = 0, endMinutes = 0;
+
+        const startTime = employee?.customStartTime ?? employer?.workStartTime;
+        const endTime = employee?.customEndTime ?? employer?.workEndTime;
+
+        if (startTime) {
+        [startHours, startMinutes] = startTime.split(":").map(Number);
+        }
+
+        if (endTime) {
+        [endHours, endMinutes] = endTime.split(":").map(Number);
+        }
+        startofDayUTC.setUTCHours(startHours,startMinutes,0,0)
+        const endOfDayUTC = new Date(endDate);
+        endOfDayUTC.setUTCHours(endHours, endMinutes, 59, 999);
+
         const attendanceRecords = await prisma.attendance.findMany({
             where: {
                 employeeId,
@@ -392,6 +416,8 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                 timeOut: true,
             }
         })
+
+        console.log(attendanceRecords)
 
         let regularHours = 0;
         let totalHours = 0;
@@ -413,9 +439,13 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
             let timeInHours = timeIn.getUTCHours() + (timeIn.getUTCMinutes() / 60)
                 // console.log(timeInHours)
                 let timeOutHours = timeOut.getUTCHours() + (timeOut.getUTCMinutes() / 60)
+                let workEndHours = workEndTime.getUTCHours() + (workEndTime.getUTCMinutes() / 60)
+                if(timeOutHours < timeInHours){
+                    timeOutHours += 24
+                    workEndHours += 24
+                }
                 // console.log(timeOutHours)
                 let workStartHours = workStartTime.getUTCHours() + (workStartTime.getUTCMinutes() / 60)
-                let workEndHours = workEndTime.getUTCHours() + (workEndTime.getUTCMinutes() / 60)
                 const overtimeThresholdHours = workEndHours + (employer?.overtimeThresholdInMinutes! / 60)
                 let thresholdAfterLateTime = workGracePeriodThresholdTime.getUTCHours() + (workGracePeriodThresholdTime.getUTCMinutes() / 60)
                 let gracePeriodInMinutesTime = workGracePeriodTime.getUTCHours() + (workGracePeriodTime.getUTCMinutes() / 60)
@@ -436,6 +466,7 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                 let regularHoursWorked = 0; // Convert ms → hours
                 
                 // Define lunch break time (12:00 PM - 1:00 PM)
+                
                 const lunchStart = new Date(timeIn);
                 lunchStart.setUTCHours(12, 0, 0, 0);
                 const lunchStartHours = lunchStart.getUTCHours() + (lunchStart.getUTCMinutes() / 60)
@@ -447,13 +478,19 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                 // console.log(timeOutHours)
                 
                 if(timeOutHours >= overtimeThresholdHours){
+                    console.log("a")
                     overtimeHours += (timeOutHours - workEndHours);
                     hoursWorked = (timeOutHours - timeInHours)
                     regularHoursWorked = (workEndHours - workStartHours) - deductionHours
                 }else if (timeOutHours < workEndHours){
+                    console.log("b")
                     regularHoursWorked = (timeOutHours - workStartHours) - deductionHours
                     hoursWorked = (timeOutHours - timeInHours)
                 }else if(timeOutHours >= workEndHours){
+                    console.log(timeInHours)
+                    console.log(timeOutHours)
+                    console.log(workEndHours)
+                    console.log("c")
                     regularHoursWorked = (workEndHours - workStartHours) - deductionHours
                     hoursWorked = (workEndHours - timeInHours)
                 }
@@ -462,6 +499,23 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                   hoursWorked -= 1;
                   regularHoursWorked -= 1;
                 }
+
+                if(employee?.shiftType == ShiftType.NIGHT){
+                    const nightShiftBreak = new Date(timeIn);
+                    nightShiftBreak.setUTCHours(0, 0, 0, 0)
+                    // const nightShiftStartHours = nightShiftBreak.getHours() + (nightShiftBreak.getUTCMinutes() / 60)
+                    const nightShiftBreakEnd = new Date(timeIn)
+                    const startHour = employee.customStartTime?.split(":")[0]
+                    const startMin = employee.customStartTime?.split(":")[1]
+                    nightShiftBreakEnd.setUTCHours(Number(startHour) + 1, Number(startMin), 0, 0)
+                    const nightShiftBreakEndHours = nightShiftBreakEnd.getUTCHours() + (nightShiftBreakEnd.getUTCMinutes() / 60)
+                    console.log(timeInHours)
+                    console.log(nightShiftBreakEndHours)
+                    if (timeInHours < nightShiftBreakEndHours) {
+                        hoursWorked -= (nightShiftBreakEndHours - timeInHours);
+                        regularHoursWorked -= (nightShiftBreakEndHours - timeInHours);
+                    }
+                }
                 // if(dayIndex == 6){
                 //     rdotHours += (timeOutHours - timeInHours)
                 //     if (timeInHours < lunchStartHours && timeOutHours > lunchEndHours) {
@@ -469,6 +523,8 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                 //     }
                 // }else{
                     // }
+                console.log(regularHoursWorked)
+                console.log(hoursWorked)
                 regularHours += Math.max(regularHoursWorked, 0)
                 totalHours += hoursWorked
         })
@@ -559,9 +615,9 @@ export async function updatePayslipStatus(id: string, status: PayslipStatus){
 
 export async function createEmployeeCashAdvance(employeeId: string, amount: number, date: string){
     if(!employeeId) return null
-    console.log(date)
+    // console.log(date)
     const createdDate = new Date(date);
-    console.log(createdDate)
+    // console.log(createdDate)
     try {
         const hasCashAdvance = await prisma.cashAdvance.findFirst({
             where: {

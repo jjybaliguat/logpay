@@ -1,4 +1,5 @@
 import { AttendanceError } from "@/types/attendance";
+import { getUTCDateWithTime } from "@/utils/getUTCDateWithTime";
 import { AttendanceStatus, PrismaClient, ShiftType } from "@prisma/client";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
 import { NextResponse } from "next/server";
@@ -7,13 +8,6 @@ const prisma = new PrismaClient()
 
 function timeToSeconds(date: Date) {
   return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
-}
-
-function getUTCDateWithTime(base: Date, timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const d = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
-  d.setUTCHours(hours, minutes, 0, 0); // Set hours and minutes in UTC
-  return d;
 }
 
 export async function GET(req: Request){
@@ -64,7 +58,7 @@ export async function POST(req: Request){
     const url = new URL(req.url)
     const searchParams = new URLSearchParams(url.search) 
     const deviceToken = searchParams.get('deviceToken') as string
-    const {fingerId, timeIn} = await req.json()
+    const {fingerId, timeIn, timeOut} = await req.json()
     // const filters: any = {};
     const now = new Date();
             // Get start and end of today
@@ -127,10 +121,21 @@ export async function POST(req: Request){
             }
         })
 
-        const startTime = getUTCDateWithTime(now, employee.customStartTime? employee.customStartTime! : device?.user?.workStartTime!)
-        let endTime = getUTCDateWithTime(now, employee.customEndTime? employee.customEndTime! : device?.user?.workEndTime!)
+        const baseDate = timeIn || timeOut ? new Date(timeIn ?? timeOut) : now;
+
+        const startTimeStr = employee.customStartTime ?? device?.user?.workStartTime!;
+        const endTimeStr = employee.customEndTime ?? device?.user?.workEndTime!;
+
+        const startTime = getUTCDateWithTime(baseDate, startTimeStr);
+        let endTime = getUTCDateWithTime(baseDate, endTimeStr);
+
+        // ✅ Handle cross-day shift (end time is "earlier" than start time)
+        if (endTime <= startTime && timeOut) {
+            startTime.setUTCDate(startTime.getUTCDate() - 1);
+            // endTime.setUTCDate(endTime.getUTCDate() + 1);
+        }
         if (endTime <= startTime) {
-            endTime = addDays(endTime, 1); // Move endTime to next day
+            endTime.setUTCDate(endTime.getUTCDate() + 1);
         }
 
         // Check if there's already a time-in record for today
@@ -143,28 +148,31 @@ export async function POST(req: Request){
         });
 
         if (existingRecord) {
-            // If timeOut is already recorded, prevent duplicate updates
+            // Prevent duplicate time-out
             if (existingRecord.timeOut) {
-              return NextResponse.json({error: AttendanceError.SIGNED_OUT_ALREADY}, {status: 400})
+                return NextResponse.json({ error: AttendanceError.SIGNED_OUT_ALREADY }, { status: 400 });
             }
 
-            const lastLoginTime = new Date(existingRecord.timeIn);
-            const timeNow = timeIn? new Date(timeIn) : now;
-            const diffInMinutes = (timeNow.getTime() - lastLoginTime.getTime()) / (1000 * 60);
+            const proposedTimeOut = timeOut ? new Date(timeOut) : now;
 
-                    // Prevent duplicate login if already signed in before 12:00 PM
-            if (diffInMinutes < 30) {
-                return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 });
+            console.log(now)
+
+            if (proposedTimeOut <= new Date(existingRecord.timeIn)) {
+                return NextResponse.json({ error: "Invalid timeOut: must be after timeIn." }, { status: 400 });
             }
-        
-            // Update timeOut with the exact time of API call
+
             const updatedAttendance = await prisma.attendance.update({
-              where: { id: existingRecord.id },
-              data: { timeOut: now }, // Exact time when API is called
+                where: { id: existingRecord.id },
+                data: {
+                    timeOut: proposedTimeOut,
+                },
             });
-        
-            return NextResponse.json({name: employee?.fullName?.split(" ")[0], timeOut: updatedAttendance.timeOut});
-          }
+
+            return NextResponse.json({
+                name: employee?.fullName?.split(" ")[0],
+                timeOut: updatedAttendance.timeOut,
+            });
+        }
 
         if(!device){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
