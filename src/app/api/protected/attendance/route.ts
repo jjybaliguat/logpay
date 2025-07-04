@@ -1,8 +1,20 @@
 import { AttendanceError } from "@/types/attendance";
-import { AttendanceStatus, PrismaClient } from "@prisma/client";
+import { AttendanceStatus, PrismaClient, ShiftType } from "@prisma/client";
+import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient()
+
+function timeToSeconds(date: Date) {
+  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+}
+
+function getUTCDateWithTime(base: Date, timeStr: string): Date {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const d = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
+  d.setUTCHours(hours, minutes, 0, 0); // Set hours and minutes in UTC
+  return d;
+}
 
 export async function GET(req: Request){
     const url = new URL(req.url)
@@ -54,7 +66,7 @@ export async function POST(req: Request){
     const deviceToken = searchParams.get('deviceToken') as string
     const {fingerId, timeIn} = await req.json()
     // const filters: any = {};
-    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    const now = new Date();
             // Get start and end of today
         const startOfDay = new Date(now);
         startOfDay.setHours(0, 0, 0, 0);
@@ -92,22 +104,41 @@ export async function POST(req: Request){
                 isActive: true,
                 deviceId: deviceToken
             },
-            select: {
-                id: true, // Get employee ID
-                fingerPrints: { select: { fingerId: true } }, // Get all their fingerIds,
-                fullName: true
+            include: {
+                fingerPrints: true
             }
+            // select: {
+            //     id: true, // Get employee ID
+            //     fingerPrints: { select: { fingerId: true } }, // Get all their fingerIds,
+            //     fullName: true
+            // }
         })
 
         if(!employee){
             return NextResponse.json({error: `Employee with fingerId ${fingerId} not found.`}, {status: 404})
         }
+
+        const device = await prisma.device.findUnique({
+            where: {
+                deviceId: deviceToken
+            },
+            include: {
+                user: true
+            }
+        })
+
+        const startTime = getUTCDateWithTime(now, employee.customStartTime? employee.customStartTime! : device?.user?.workStartTime!)
+        let endTime = getUTCDateWithTime(now, employee.customEndTime? employee.customEndTime! : device?.user?.workEndTime!)
+        if (endTime <= startTime) {
+            endTime = addDays(endTime, 1); // Move endTime to next day
+        }
+
         // Check if there's already a time-in record for today
         const existingRecord = await prisma.attendance.findFirst({
             where: {
             deviceId: deviceToken,
             fingerprintId: { in: employee.fingerPrints.map(fp => fp.fingerId) }, // Check all fingerIds
-            timeIn: { gte: startOfDay, lte: endOfDay }, // Check today's records
+            timeIn: { gte: startTime, lte: endTime }, // Check today's records
             },
         });
 
@@ -118,7 +149,8 @@ export async function POST(req: Request){
             }
 
             const lastLoginTime = new Date(existingRecord.timeIn);
-            const diffInMinutes = (now.getTime() - lastLoginTime.getTime()) / (1000 * 60);
+            const timeNow = timeIn? new Date(timeIn) : now;
+            const diffInMinutes = (timeNow.getTime() - lastLoginTime.getTime()) / (1000 * 60);
 
                     // Prevent duplicate login if already signed in before 12:00 PM
             if (diffInMinutes < 30) {
@@ -134,21 +166,18 @@ export async function POST(req: Request){
             return NextResponse.json({name: employee?.fullName?.split(" ")[0], timeOut: updatedAttendance.timeOut});
           }
 
-        const device = await prisma.device.findUnique({
-            where: {
-                deviceId: deviceToken
-            },
-            include: {
-                user: true
-            }
-        })
-
         if(!device){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
         }
 
-        const cutoffTime = new Date(now);
-        cutoffTime.setHours(8, Number(device.user?.gracePeriodInMinutes), 0, 0); // set time-in grace period time
+        let cutoffTime = new Date(now);
+        if(employee.shiftType != ShiftType.NORMAL){
+            const startHours = Number(employee.customStartTime?.split(":")[0]);
+            const startMinutes = Number(employee.customStartTime?.split(":")[1]);
+            cutoffTime.setUTCHours(startHours, startMinutes + Number(device.user?.gracePeriodInMinutes), 0);
+        }else{
+            cutoffTime.setUTCHours(8, Number(device.user?.gracePeriodInMinutes), 0, 0); // set time-in grace period time
+        }
 
         // Determine status
         const timeNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
@@ -157,9 +186,9 @@ export async function POST(req: Request){
         if(!timeIn){
             status = timeNow > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME
         }else{
-            const timeInTime = new Date(timeIn)
+            let timeInTime = new Date(timeIn)
             timeInTime.setUTCSeconds(0)
-            status = timeInTime > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME
+            status = timeToSeconds(timeInTime) > timeToSeconds(cutoffTime) ? AttendanceStatus.LATE : AttendanceStatus.ONTIME
         }
         // const status = timeIn > cutoffTime ? AttendanceStatus.LATE : AttendanceStatus.ONTIME;
 

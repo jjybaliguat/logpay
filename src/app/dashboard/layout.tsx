@@ -11,6 +11,13 @@ import { Notifications } from '@/components/popover/Notifications'
 import HeaderBreadCrumb from '@/components/layout/HeaderBreadCrumb'
 import DateTime from '@/components/DateTime'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { Metadata } from 'next'
+
+
+export const metadata: Metadata = {
+  title: "LOGPAY | DASHBOARD",
+  description: "",
+};
 
 const RootLayout = ({
     children
