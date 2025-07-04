@@ -61,11 +61,12 @@ export async function POST(req: Request){
     const {fingerId, timeIn, timeOut} = await req.json()
     // const filters: any = {};
     const now = new Date();
+    const manilaDate = new Date(now.getTime() + 8 * 60 * 60 * 1000);
             // Get start and end of today
-        const startOfDay = new Date(now);
+        const startOfDay = new Date(manilaDate);
         startOfDay.setHours(0, 0, 0, 0);
         
-        const endOfDay = new Date(now);
+        const endOfDay = new Date(manilaDate);
         endOfDay.setHours(23, 59, 59, 999);
         // Get 12:00 PM timestamp for today
         // const thresholdLogin = new Date(now);
@@ -121,7 +122,7 @@ export async function POST(req: Request){
             }
         })
 
-        const baseDate = timeIn || timeOut ? new Date(timeIn ?? timeOut) : now;
+        const baseDate = timeIn || timeOut ? new Date(timeIn ?? timeOut) : manilaDate;
 
         const startTimeStr = employee.customStartTime ?? device?.user?.workStartTime!;
         const endTimeStr = employee.customEndTime ?? device?.user?.workEndTime!;
@@ -153,9 +154,9 @@ export async function POST(req: Request){
                 return NextResponse.json({ error: AttendanceError.SIGNED_OUT_ALREADY }, { status: 400 });
             }
 
-            const proposedTimeOut = timeOut ? new Date(timeOut) : now;
+            const proposedTimeOut = timeOut ? new Date(timeOut) : manilaDate;
 
-            console.log(now)
+            console.log(manilaDate)
 
             if (proposedTimeOut <= new Date(existingRecord.timeIn)) {
                 return NextResponse.json({ error: "Invalid timeOut: must be after timeIn." }, { status: 400 });
@@ -178,7 +179,7 @@ export async function POST(req: Request){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
         }
 
-        let cutoffTime = new Date(now);
+        let cutoffTime = new Date(manilaDate);
         if(employee.shiftType != ShiftType.NORMAL){
             const startHours = Number(employee.customStartTime?.split(":")[0]);
             const startMinutes = Number(employee.customStartTime?.split(":")[1]);
@@ -204,7 +205,7 @@ export async function POST(req: Request){
             data: {
                 fingerprintId: Number(fingerId),
                 employeeId: employee?.id as string,
-                timeIn: timeIn? timeIn : now,
+                timeIn: timeIn? timeIn : manilaDate,
                 status,
                 deviceId: deviceToken,
             },
