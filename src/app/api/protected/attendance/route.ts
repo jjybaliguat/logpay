@@ -187,7 +187,7 @@ export async function POST(req: Request){
         if(!device){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
         }
-        startTime.setUTCHours(startTime.getUTCHours() + 1) 
+        startTime.setUTCHours(startTime.getUTCHours()) 
         let startTimeHourMinutes = startTime.getHours() + (startTime.getMinutes() / 60)
         const timeInDate = new Date(timeIn)
         let timeInHoursMinutes = (timeIn? timeInDate.getHours() :  manilaDate.getHours()) + (timeInDate.getMinutes() / 60)
