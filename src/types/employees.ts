@@ -21,6 +21,8 @@ export interface Employees{
     fingerEnrolled: boolean,
     deviceId: string,
     device: Device,
+    customStartTime: string,
+    customEndTime: string,
     shiftType: ShiftType,
     cashAdvance: {
         id: string,

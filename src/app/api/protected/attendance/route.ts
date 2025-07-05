@@ -127,9 +127,9 @@ export async function POST(req: Request){
         const startTimeStr = employee.customStartTime ?? device?.user?.workStartTime!;
         const endTimeStr = employee.customEndTime ?? device?.user?.workEndTime!;
 
-        const startTime = getUTCDateWithTime(baseDate, startTimeStr);
+        let startTime = getUTCDateWithTime(baseDate, startTimeStr);
         let endTime = getUTCDateWithTime(baseDate, endTimeStr);
-
+        startTime.setHours(startTime.getHours() - 2)
         // ✅ Handle cross-day shift (end time is "earlier" than start time)
         if (endTime <= startTime && timeOut) {
             startTime.setUTCDate(startTime.getUTCDate() - 1);

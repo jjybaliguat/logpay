@@ -51,6 +51,8 @@ const formSchema = z.object({
   pagIbigNumber: z.string().optional(),
   philHealthNumber: z.string().optional(),
   isActive: z.boolean(),
+  customStartTime: z.string().optional().nullable(),
+  customEndTime: z.string().optional().nullable(),
   shiftType: z.string(),
 })
 
@@ -88,6 +90,8 @@ const UpdateEmployeeForm = ({
           pagIbigNumber: employee.pagIbigNumber? employee.pagIbigNumber : "",
           philHealthNumber: employee.philHealthNumber? employee.philHealthNumber : "",
           isActive: employee.isActive? true : false,
+          customStartTime: employee.customStartTime,
+          customEndTime: employee.customEndTime,
           shiftType: employee.shiftType
         },
       })
@@ -99,6 +103,10 @@ const UpdateEmployeeForm = ({
         // ✅ This will be type-safe and validated.
         // console.log(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee`)
         // console.log(values)
+        if(values.shiftType !== ShiftType.NORMAL && (values.customStartTime == null || values.customEndTime == null)){
+            alert("CustomStartTime & CustomEndTime can't be null for different shifts!")
+            return
+        }
         try {
             setIsSubmitting(true)
             const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee?id=${employee.id}`, {
@@ -106,7 +114,7 @@ const UpdateEmployeeForm = ({
                 body: JSON.stringify({...values})
             })
             const data = await response.json()
-            if(!data.error){
+            if(response.ok){
                 if(buttonRef.current){
                     buttonRef?.current.click()
                 }
@@ -402,6 +410,38 @@ const UpdateEmployeeForm = ({
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
+                            </FormControl>
+                            <FormDescription>
+                                
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="customStartTime"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Custom Start Time</FormLabel><br />
+                            <FormControl>
+                                <Input type='time' value={field.value!} onChange={field.onChange} placeholder='start time' />
+                            </FormControl>
+                            <FormDescription>
+                                
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="customEndTime"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Custom End Time</FormLabel><br />
+                            <FormControl>
+                                <Input type='time' value={field.value!} onChange={field.onChange} placeholder='end time' />
                             </FormControl>
                             <FormDescription>
                                 

@@ -365,8 +365,8 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
         if(!employer) return null
         const timeParts: number[] | undefined = employee?.shiftType == ShiftType.NORMAL? employee.customStartTime? employee.customStartTime.split(":").map(Number) : employer?.workStartTime?.split(":").map(Number) : employee?.customStartTime?.split(":").map(Number);
         const timeEndParts: number[] | undefined = employee?.shiftType == ShiftType.NORMAL? employee.customStartTime? employee.customEndTime?.split(":").map(Number) : employer?.workEndTime?.split(":").map(Number) : employee?.customEndTime?.split(":").map(Number);
-        console.log(timeParts)
-        console.log(timeEndParts)
+        // console.log(timeParts)
+        // console.log(timeEndParts)
         if(!timeParts) return null
         if(!timeEndParts) return null
         // Create a new Date object with the correct time, forcing UTC
@@ -401,9 +401,9 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
         if (endTime) {
         [endHours, endMinutes] = endTime.split(":").map(Number);
         }
-        startofDayUTC.setUTCHours(startHours,startMinutes,0,0)
+        startofDayUTC.setUTCHours(startHours - 2,startMinutes,0,0)
         const endOfDayUTC = new Date(endDate);
-        endOfDayUTC.setUTCHours(endHours, endMinutes, 59, 999);
+        endOfDayUTC.setUTCHours(endHours + 1, endMinutes, 59, 999);
 
         const attendanceRecords = await prisma.attendance.findMany({
             where: {

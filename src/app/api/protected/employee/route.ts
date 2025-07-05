@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ShiftType } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient()
@@ -90,22 +90,33 @@ export async function PATCH(req: Request){
     const searchParams = new URLSearchParams(url.search) 
     const id = searchParams.get('id') as string
     const body = await req.json()
+    const {customStartTime, customEndTime, shiftType} = body
+    let customStart = customStartTime
+    let customEnd = customEndTime
 
-    console.log(body)
+    // console.log(body)
 
     if(!id){
         return NextResponse.json({error: "Missing required fields"}, {status: 400})
     }
 
     try {
+        if((customStart || customEnd) && shiftType == ShiftType.NORMAL){
+            customStart = null;
+            customEnd = null;
+        }
 
         const response = await prisma.employee.update({
             where: {
                 id: id
             },
-            data: body
+            data: {
+                ...body,
+                customStartTime: customStart,
+                customEndTime: customEnd,
+            }
         })
-        console.log(response)
+        // console.log(response)
         prisma.$disconnect()
         return NextResponse.json(response, {status: 200})
     } catch (error) {
