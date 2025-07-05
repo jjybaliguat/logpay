@@ -25,4 +25,5 @@ export enum AttendanceStatus {
 export enum AttendanceError {
     SIGNED_IN_ALREADY = "SIGNED_IN_ALREADY",
     SIGNED_OUT_ALREADY = "SIGNED_OUT_ALREADY",
+    TOO_EARLY = "TOO_EARLY",
 }

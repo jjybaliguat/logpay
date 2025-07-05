@@ -89,7 +89,7 @@ export default function AttendancePage() {
                   <TableRow key={attendance.id} className={cn({
                     'bg-red-500': !attendance.timeIn
                   })}>
-                    <TableCell>{formatDate(attendance.createdAt)}</TableCell>
+                    <TableCell>{formatDate(attendance.timeIn)}</TableCell>
                     <TableCell>{attendance.timeIn? formatDateTime(attendance.timeIn) : "Absent"}</TableCell>
                     <TableCell>{attendance.timeOut ? formatDateTime(attendance.timeOut) : "-----"}</TableCell>
                     <TableCell className={

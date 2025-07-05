@@ -129,7 +129,7 @@ export async function POST(req: Request){
 
         let startTime = getUTCDateWithTime(baseDate, startTimeStr);
         let endTime = getUTCDateWithTime(baseDate, endTimeStr);
-        startTime.setHours(startTime.getHours() - 2)
+        startTime.setUTCHours(startTime.getUTCHours() - 2)
         // ✅ Handle cross-day shift (end time is "earlier" than start time)
         if (endTime <= startTime && timeOut) {
             startTime.setUTCDate(startTime.getUTCDate() - 1);
@@ -154,9 +154,18 @@ export async function POST(req: Request){
                 return NextResponse.json({ error: AttendanceError.SIGNED_OUT_ALREADY }, { status: 400 });
             }
 
+            const lastLoginTime = new Date(existingRecord.timeIn);
+            const timeNow = timeIn? new Date(timeIn) : now;
+            const diffInMinutes = (timeNow.getTime() - lastLoginTime.getTime()) / (1000 * 60);
+
+                    // Prevent duplicate login if already signed in before 12:00 PM
+            if (diffInMinutes < 30) {
+                return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 });
+            }
+
             const proposedTimeOut = timeOut ? new Date(timeOut) : manilaDate;
 
-            console.log(manilaDate)
+            // console.log(manilaDate)
 
             if (proposedTimeOut <= new Date(existingRecord.timeIn)) {
                 return NextResponse.json({ error: "Invalid timeOut: must be after timeIn." }, { status: 400 });
@@ -178,7 +187,18 @@ export async function POST(req: Request){
         if(!device){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
         }
-
+        startTime.setUTCHours(startTime.getUTCHours() + 1) 
+        let startTimeHourMinutes = startTime.getHours() + (startTime.getMinutes() / 60)
+        const timeInDate = new Date(timeIn)
+        let timeInHoursMinutes = (timeIn? timeInDate.getHours() :  manilaDate.getHours()) + (timeInDate.getMinutes() / 60)
+        // if(getUTCDateWithTime(baseDate, startTimeStr).getHours() < getUTCDateWithTime(baseDate, endTimeStr).getHours()){
+        //     startTimeHourMinutes += 24
+        // }
+        console.log(timeInHoursMinutes)
+        console.log(startTimeHourMinutes)
+        if(timeInHoursMinutes < startTimeHourMinutes){
+            return NextResponse.json({error: AttendanceError.TOO_EARLY}, {status: 400})
+        }
         let cutoffTime = new Date(manilaDate);
         if(employee.shiftType != ShiftType.NORMAL){
             const startHours = Number(employee.customStartTime?.split(":")[0]);
