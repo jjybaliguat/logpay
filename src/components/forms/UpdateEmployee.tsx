@@ -30,6 +30,7 @@ import { Employees } from '@/types/employees'
 import { EmployeeStatus, SelectEmployeeStatus } from '../select/SelectEmployeeStatus'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select'
 import { ShiftType } from '@prisma/client'
+import { getTimeInterval } from '@/utils/getTimeInterval'
 // import { DeductionStatus, DeductionType } from '@prisma/client'
 // import { SelectDeductionType } from '@/components/select/SelectDeductionType'
 // import { SelectDeductionStatus } from '@/components/select/SelectDeductionStatus'
@@ -103,6 +104,10 @@ const UpdateEmployeeForm = ({
         // ✅ This will be type-safe and validated.
         // console.log(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee`)
         // console.log(values)
+        if(values.shiftType !== ShiftType.NORMAL && getTimeInterval(values.customStartTime, values.customEndTime) != 8){
+            alert("CustomStartTime & CustomEndTime must be exact 8 hours interval")
+            return
+        }
         if(values.shiftType !== ShiftType.NORMAL && (values.customStartTime == null || values.customEndTime == null)){
             alert("CustomStartTime & CustomEndTime can't be null for different shifts!")
             return

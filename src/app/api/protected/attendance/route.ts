@@ -188,14 +188,16 @@ export async function POST(req: Request){
             return NextResponse.json({error: `No device found with deviceId ${deviceToken}`})
         }
         startTime.setUTCHours(startTime.getUTCHours()) 
-        let startTimeHourMinutes = startTime.getHours() + (startTime.getMinutes() / 60)
+        let startTimeHourMinutes = startTime.getUTCHours() + (startTime.getUTCMinutes() / 60)
         const timeInDate = new Date(timeIn)
-        let timeInHoursMinutes = (timeIn? timeInDate.getHours() :  manilaDate.getHours()) + (timeInDate.getMinutes() / 60)
+        let timeInHoursMinutes = (timeIn? timeInDate.getUTCHours() :  manilaDate.getUTCHours()) + (timeInDate.getUTCMinutes() / 60)
         // if(getUTCDateWithTime(baseDate, startTimeStr).getHours() < getUTCDateWithTime(baseDate, endTimeStr).getHours()){
         //     startTimeHourMinutes += 24
         // }
         console.log(timeInHoursMinutes)
         console.log(startTimeHourMinutes)
+        console.log(employee.customStartTime)
+        console.log(employee.customEndTime)
         if(timeInHoursMinutes < startTimeHourMinutes){
             return NextResponse.json({error: AttendanceError.TOO_EARLY}, {status: 400})
         }
