@@ -108,10 +108,10 @@ const UpdateEmployeeForm = ({
             alert("CustomStartTime & CustomEndTime must be exact 8 hours interval")
             return
         }
-        if(values.shiftType !== ShiftType.NORMAL && (values.customStartTime == null || values.customEndTime == null)){
-            alert("CustomStartTime & CustomEndTime can't be null for different shifts!")
-            return
-        }
+        // if(values.shiftType !== ShiftType.NORMAL && (values.customStartTime == null || values.customEndTime == null)){
+        //     alert("CustomStartTime & CustomEndTime can't be null for different shifts!")
+        //     return
+        // }
         try {
             setIsSubmitting(true)
             const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/employee?id=${employee.id}`, {
