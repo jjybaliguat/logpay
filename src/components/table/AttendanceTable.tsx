@@ -49,6 +49,8 @@ import { Attendance, AttendanceStatus } from "@/types/attendance"
 import { formatDateTime } from "@/utils/formatDateTime"
 import { EditAttendanceDialog } from "../dialogs/EditAttendanceDialog"
 import { DeleteAttendanceDialog } from "../dialogs/DeleteAttendanceDialog"
+import { Label } from "../ui/label"
+import { DataTablePagination } from "../DataTablePagination"
 
 export const columns: ColumnDef<Attendance>[] = [
   {
@@ -143,30 +145,43 @@ export const columns: ColumnDef<Attendance>[] = [
   },
 ]
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+
 export function AttendanceTable() {
-  const {data: session} = useSession()
-  const userId = session?.user.parentId? session?.user.parentId : session?.user.id
+  const { data: session } = useSession();
 
-  const {data, isLoading} = useSWR(userId? "getAttendance" : null, getAttendance)
+  const userId = session?.user.parentId ?? session?.user.id;
 
-  async function getAttendance(){
-    if(!userId) return 
+  const [limit, setLimit] = React.useState(50);
+  const debouncedLimit = useDebounce(limit, 500); // debounce delay of 500ms
+
+  const { data, isLoading, mutate } = useSWR(
+    userId ? ["getAttendance", debouncedLimit] : null,
+    () => getAttendance(userId, debouncedLimit)
+  );
+
+  async function getAttendance(userId: string | undefined, limit: number) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/attendance?id=${userId}`)
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/attendance?id=${userId}&limit=${limit}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch attendance");
 
-      const data = await response.json()
-
-      return data
+      return await response.json();
     } catch (error) {
-      console.log(error)
+      console.error("Error fetching attendance:", error);
     }
   }
-
-  // React.useEffect(()=>{
-  //   if(session.data?.user){
-  //     mutate("getEmployees")
-  //   }
-  // }, [session])
 
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -208,6 +223,10 @@ export function AttendanceTable() {
           }
           className="max-w-sm"
         />
+        <div className="ml-4 flex gap-4 items-center">
+          <Label htmlFor="limit">Result Limit</Label>
+          <Input id="limit" value={limit} type="number" onChange={(e)=>setLimit(Number(e.target.value))} placeholder="result limit"/>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -234,6 +253,9 @@ export function AttendanceTable() {
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+      <div className='my-4'>
+          <DataTablePagination table={table} />
       </div>
       <div className="rounded-md border">
         <Table>
@@ -285,7 +307,7 @@ export function AttendanceTable() {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      {/* <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table?.getFilteredSelectedRowModel().rows.length} of{" "}
           {table?.getFilteredRowModel().rows.length} row(s) selected.
@@ -308,7 +330,7 @@ export function AttendanceTable() {
             Next
           </Button>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }
