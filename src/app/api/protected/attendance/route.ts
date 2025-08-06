@@ -247,7 +247,7 @@ export async function PATCH(req: Request) {
     const url = new URL(req.url)
     const searchParams = new URLSearchParams(url.search) 
     const id = searchParams.get('id') as string
-    const {timeIn, timeOut} = await req.json()
+    const {timeIn, timeOut, status} = await req.json()
 
     try {
         const attendance = await prisma.attendance.update({
@@ -256,7 +256,8 @@ export async function PATCH(req: Request) {
             },
             data: {
                 timeIn,
-                timeOut
+                timeOut,
+                status
             }
         })
 

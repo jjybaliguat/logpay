@@ -33,6 +33,8 @@ import { mutate } from "swr"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Attendance } from "@/types/attendance"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select"
+import { AttendanceStatus } from "@prisma/client"
 
 export function EditAttendanceDialog({
     attendance
@@ -57,6 +59,7 @@ export function EditAttendanceDialog({
     const [dateOut, setDateOut] = useState(parseDate(attendance.timeOut? attendance.timeOut : null))
     const [timeIn, setTimeIn] = useState(parseTime(attendance.timeIn))
     const [timeOut, setTimeOut] = useState(parseTime(attendance.timeOut))
+    const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>(attendance.status)
     const [submitting, setSubmitting] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     
@@ -75,7 +78,7 @@ export function EditAttendanceDialog({
         setSubmitting(true)
         const response = await fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/protected/attendance?id=${attendance.id}`, {
             method: "PATCH",
-            body: JSON.stringify({timeIn: newTimeInUTC,  timeOut: newTimeOutUTC})
+            body: JSON.stringify({timeIn: newTimeInUTC,  timeOut: newTimeOutUTC, status: attendanceStatus})
         })
         const data = await response.json()
 
@@ -132,6 +135,19 @@ export function EditAttendanceDialog({
                             <Input type="date" value={dateOut} onChange={(e) => setDateOut(e.target.value)} />
                             <Input type="time" step="1" value={timeOut} onChange={(e) => setTimeOut(e.target.value)} />
                         </div>
+                        <Select value={attendanceStatus} onValueChange={(status: AttendanceStatus) => setAttendanceStatus(status)}>
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Status</SelectLabel>
+                              {Object.values(AttendanceStatus).map((status)=>(
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <div className="flex justify-end items-center gap-4 mt-8">
