@@ -392,18 +392,24 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
         let endHours = 0, endMinutes = 0;
 
         const startTime = employee?.customStartTime ?? employer?.workStartTime;
-        const endTime = employee?.customEndTime ?? employer?.workEndTime;
+        // const endTime = employee?.customEndTime ?? employer?.workEndTime;
 
         if (startTime) {
         [startHours, startMinutes] = startTime.split(":").map(Number);
         }
 
-        if (endTime) {
-        [endHours, endMinutes] = endTime.split(":").map(Number);
-        }
-        startofDayUTC.setUTCHours(startHours - 2,startMinutes,0,0)
+        // Always set endOfDayUTC to the end of the day to include late timeouts
+        startofDayUTC.setUTCHours(Math.max(0, startHours - 2), startMinutes, 0, 0);
         const endOfDayUTC = new Date(endDate);
-        endOfDayUTC.setUTCHours(endHours + 1, endMinutes, 59, 999);
+        // Set endOfDayUTC to the employee's custom end time if available, otherwise default to 23:59:59
+        const endTime = employee?.customEndTime ?? employer?.workEndTime;
+        if (endTime) {
+            [endHours, endMinutes] = endTime.split(":").map(Number);
+            // Add 8 hours to the end time for safety
+            endOfDayUTC.setUTCHours(endHours + 8, endMinutes, 59, 999);
+        } else {
+            endOfDayUTC.setUTCHours(23, 59, 59, 999);
+        }
 
         const attendanceRecords = await prisma.attendance.findMany({
             where: {
@@ -483,14 +489,12 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
                     hoursWorked = (timeOutHours - timeInHours)
                     regularHoursWorked = (workEndHours - workStartHours) - deductionHours
                 }else if (timeOutHours < workEndHours){
-                    console.log("b")
                     regularHoursWorked = (timeOutHours - workStartHours) - deductionHours
                     hoursWorked = (timeOutHours - timeInHours)
                 }else if(timeOutHours >= workEndHours){
                     console.log(timeInHours)
                     console.log(timeOutHours)
                     console.log(workEndHours)
-                    console.log("c")
                     regularHoursWorked = (workEndHours - workStartHours) - deductionHours
                     hoursWorked = (workEndHours - timeInHours)
                 }
@@ -535,14 +539,17 @@ export async function getEmployeeAttendanceTotalHours(employerId: string | undef
             regularHours: parseFloat(regularHours.toFixed(1)),
             overtimeHours: parseFloat(overtimeHours.toFixed(1)),
             rdotHours: parseFloat(rdotHours.toFixed(1)),
-            attendanceLogs: attendanceRecords.map((attendance)=>{
-                if(attendance.timeOut){
-                    return {
-                        timeIn: attendance.timeIn.toISOString(),
-                        timeOut: attendance.timeOut.toISOString()
+            attendanceLogs: attendanceRecords
+                .map((attendance) => {
+                    if (attendance.timeOut) {
+                        return {
+                            timeIn: attendance.timeIn.toISOString(),
+                            timeOut: attendance.timeOut.toISOString()
+                        };
                     }
-                }
-            })
+                    return undefined;
+                })
+                .filter((log) => log !== undefined)
         }
 
     } catch (error) {
