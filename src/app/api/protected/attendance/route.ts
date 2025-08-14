@@ -15,6 +15,8 @@ export async function GET(req: Request){
     const searchParams = new URLSearchParams(url.search) 
     const id = searchParams.get('id') as string
     const limit = searchParams.get('limit') as string
+    const from = searchParams.get('from') as string | null
+    const to = searchParams.get('to') as string | null
     const filters: any = {};
     if(!id){
         return NextResponse.json({message: "Unauthorized"}, {status: 401})
@@ -22,12 +24,24 @@ export async function GET(req: Request){
         filters.employerId = id
     }
 
+    // Build date filter if from/to provided
+    let timeInFilter: any = undefined;
+    if (from && to) {
+        // Use start of from day and end of to day
+        const fromDate = new Date(from);
+        fromDate.setHours(0,0,0,0);
+        const toDate = new Date(to);
+        toDate.setHours(23,59,59,999);
+        timeInFilter = { gte: fromDate, lte: toDate };
+    }
+
     try {
         const attendanceLogs = await prisma.attendance.findMany({
             where: {
-                employee: filters
+                employee: filters,
+                ...(timeInFilter ? { timeIn: timeInFilter } : {})
             },
-            take: limit? Number(limit) : 100,
+            take: limit? Number(limit) : (from && to ? undefined : 100),
             include: {
                 employee: {
                     include: {
@@ -39,7 +53,6 @@ export async function GET(req: Request){
                 timeIn: "desc"
             }
         })
-        // console.log(attendanceLogs)
         prisma.$disconnect()
         return NextResponse.json(attendanceLogs.map((attendance)=>{
             return {

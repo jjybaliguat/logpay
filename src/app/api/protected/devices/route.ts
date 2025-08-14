@@ -28,7 +28,7 @@ export async function GET(req: Request){
                 employees: true,
             }
         })
-        console.log(devices)
+        // console.log(devices)
 
         return NextResponse.json(devices, {status: 200})
     } catch (error) {

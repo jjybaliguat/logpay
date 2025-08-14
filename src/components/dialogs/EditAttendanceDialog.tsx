@@ -12,29 +12,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { z } from "zod"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { useEffect, useRef, useState } from "react"
-import { generateDeviceId } from "@/utils/generateDeviceId"
-import { RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { mutate } from "swr"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Attendance } from "@/types/attendance"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select"
 import { AttendanceStatus } from "@prisma/client"
+import { useRef, useState } from "react"
 
 export function EditAttendanceDialog({
     attendance
@@ -62,6 +46,7 @@ export function EditAttendanceDialog({
     const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>(attendance.status)
     const [submitting, setSubmitting] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
+    const router = useRouter()
     
     async function onSubmit(e: React.FormEvent) {
       e.preventDefault()
@@ -96,7 +81,8 @@ export function EditAttendanceDialog({
             description: `Attendance has been updated`,
             duration: 3000,
           })
-         mutate("getAttendance")
+         // Revalidate all attendance queries
+         mutate((key) => Array.isArray(key) && key[0] === "getAttendance")
         }
     } catch (error: any) {
         console.log(error)
