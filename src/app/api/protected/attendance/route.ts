@@ -169,11 +169,8 @@ export async function POST(req: Request){
 
             const lastLoginTime = new Date(existingRecord.timeIn);
             console.log(lastLoginTime)
-            const timeNow = now;
-            console.log(timeNow)
-            const diffInMinutes = (timeNow.getTime() - lastLoginTime.getTime()) / (1000 * 60);
-            console.log(timeNow.getTime())
-            console.log(lastLoginTime.getTime())
+            console.log(manilaDate)
+            const diffInMinutes = (manilaDate.getTime() - lastLoginTime.getTime()) / (1000 * 60);
             console.log(diffInMinutes)
             // Check if the time difference is less than 30 minutes
             if (diffInMinutes < 30) {
