@@ -168,10 +168,14 @@ export async function POST(req: Request){
             }
 
             const lastLoginTime = new Date(existingRecord.timeIn);
-            const timeNow = timeIn? new Date(timeIn) : now;
+            console.log(lastLoginTime)
+            const timeNow = now;
+            console.log(timeNow)
             const diffInMinutes = (timeNow.getTime() - lastLoginTime.getTime()) / (1000 * 60);
-
-                    // Prevent duplicate login if already signed in before 12:00 PM
+            console.log(timeNow.getTime())
+            console.log(lastLoginTime.getTime())
+            console.log(diffInMinutes)
+            // Check if the time difference is less than 30 minutes
             if (diffInMinutes < 30) {
                 return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 });
             }
