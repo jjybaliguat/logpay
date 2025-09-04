@@ -168,10 +168,10 @@ export async function POST(req: Request){
             }
 
             const lastLoginTime = new Date(existingRecord.timeIn);
-            console.log(lastLoginTime)
+            // console.log(lastLoginTime)
             console.log(manilaDate)
             const diffInMinutes = (manilaDate.getTime() - lastLoginTime.getTime()) / (1000 * 60);
-            console.log(diffInMinutes)
+            // console.log(diffInMinutes)
             // Check if the time difference is less than 30 minutes
             if (diffInMinutes < 30) {
                 return NextResponse.json({ error: AttendanceError.SIGNED_IN_ALREADY }, { status: 400 });
